@@ -1,0 +1,55 @@
+-- Вариант №8
+
+--With index
+
+CREATE TABLE IF NOT EXISTS articles (
+    id INT PRIMARY KEY,
+    title VARCHAR(200),
+    status ENUM('draft', 'published', 'archived')
+);
+
+SET SESSION cte_max_recursion_depth = 80000;
+
+INSERT INTO articles (id, title, status)
+WITH RECURSIVE seq (n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM seq WHERE n < 80000
+)
+SELECT
+    n AS id,
+    CONCAT('Article Title ', n) AS title,
+    ELT(FLOOR(1 + RAND() * 3), 'draft', 'published', 'archived') AS status
+FROM seq;
+
+CREATE INDEX idx_status ON articles (status);
+
+EXPLAIN SELECT * FROM articles
+WHERE status = 'published'
+ORDER BY id;
+
+--Without index
+
+CREATE TABLE IF NOT EXISTS articles (
+    id INT PRIMARY KEY,
+    title VARCHAR(200),
+    status ENUM('draft', 'published', 'archived')
+);
+
+SET SESSION cte_max_recursion_depth = 80000;
+
+INSERT INTO articles (id, title, status)
+WITH RECURSIVE seq (n) AS (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM seq WHERE n < 80000
+)
+SELECT
+    n AS id,
+    CONCAT('Article Title ', n) AS title,
+    ELT(FLOOR(1 + RAND() * 3), 'draft', 'published', 'archived') AS status
+FROM seq;
+
+EXPLAIN SELECT * FROM articles
+WHERE status = 'published'
+ORDER BY id;
