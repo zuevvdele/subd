@@ -28,9 +28,11 @@ EXPLAIN SELECT * FROM articles
 WHERE status = 'published'
 ORDER BY id;
 
+
+
 --Without index
 
-CREATE TABLE IF NOT EXISTS articles (
+CREATE TABLE articles (
     id INT PRIMARY KEY,
     title VARCHAR(200),
     status ENUM('draft', 'published', 'archived')
