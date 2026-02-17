@@ -1,0 +1,61 @@
+CREATE DATABASE IF NOT EXISTS echo;
+USE echo;
+
+-- Пользователи
+CREATE TABLE users (
+    user_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    username VARCHAR(80) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('user', 'admin', 'moderator') NOT NULL DEFAULT 'user',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uq_users_email UNIQUE (email),
+    CONSTRAINT uq_users_username UNIQUE (username)
+) ENGINE=InnoDB;
+
+-- Рецензии на фильмы из TMDB
+CREATE TABLE reviews (
+    review_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+
+    tmdb_movie_id BIGINT UNSIGNED NOT NULL,
+    movie_title VARCHAR(255) NOT NULL,
+    movie_release_date DATE NULL,
+    movie_poster_path VARCHAR(255) NULL,
+
+    rating TINYINT UNSIGNED NOT NULL,
+    review_text TEXT NOT NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_reviews_rating CHECK (rating BETWEEN 1 AND 10),
+    CONSTRAINT uq_reviews_user_movie UNIQUE (user_id, tmdb_movie_id),
+    CONSTRAINT fk_reviews_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- Ответы к рецензиям
+CREATE TABLE answers (
+    answer_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    review_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    answer_text TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_answers_review
+        FOREIGN KEY (review_id) REFERENCES reviews(review_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_answers_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- Индексы под частые запросы
+CREATE INDEX idx_reviews_tmdb_movie_id_created_at ON reviews (tmdb_movie_id, created_at);
+CREATE INDEX idx_reviews_user_id_created_at ON reviews (user_id, created_at);
+CREATE INDEX idx_answers_review_id_created_at ON answers (review_id, created_at);
