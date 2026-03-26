@@ -1,0 +1,93 @@
+DROP TABLE IF EXISTS orders;
+
+CREATE TABLE orders (
+    id serial PRIMARY KEY,
+    customer_id integer NOT NULL,
+    status text NOT NULL,
+    created_at date NOT NULL
+);
+
+INSERT INTO orders (customer_id, status, created_at)
+SELECT
+    (random() * 999 + 1)::int,
+    (ARRAY['new', 'processing', 'shipped', 'cancelled'])[floor(random() * 4 + 1)],
+    date '2024-01-01' + (random() * 364)::int
+FROM generate_series(1, 500000);
+
+ANALYZE orders;
+
+-- Без индексов
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM orders
+WHERE customer_id = 123
+  AND status = 'shipped';
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM orders
+WHERE status = 'shipped';
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM orders
+WHERE created_at = '2024-03-15'
+  AND status = 'shipped';
+
+-- Обычные индексы
+CREATE INDEX idx_orders_customer_status
+ON orders(customer_id, status);
+
+CREATE INDEX idx_orders_status_created
+ON orders(status, created_at);
+
+ANALYZE orders;
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM orders
+WHERE customer_id = 123
+  AND status = 'shipped';
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM orders
+WHERE status = 'shipped';
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM orders
+WHERE created_at = '2024-03-15'
+  AND status = 'shipped';
+
+-- Удаление обычных индексов
+DROP INDEX IF EXISTS idx_orders_customer_status;
+DROP INDEX IF EXISTS idx_orders_status_created;
+
+-- Частичные индексы
+CREATE INDEX idx_orders_customer_shipped
+ON orders(customer_id)
+WHERE status = 'shipped';
+
+CREATE INDEX idx_orders_created_shipped
+ON orders(created_at)
+WHERE status = 'shipped';
+
+ANALYZE orders;
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM orders
+WHERE customer_id = 123
+  AND status = 'shipped';
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM orders
+WHERE status = 'shipped';
+
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT count(*)
+FROM orders
+WHERE created_at = '2024-03-15'
+  AND status = 'shipped';
